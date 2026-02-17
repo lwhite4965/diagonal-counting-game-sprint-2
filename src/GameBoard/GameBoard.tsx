@@ -15,7 +15,8 @@ import uploadImg from "../assets/uploadImg.svg";
 import resetImg from "../assets/resetImg.svg";
 import undoImg from "../assets/undoImg.svg";
 import { useTimer } from "../hooks/useTimer";
-import { useUser } from "@clerk/clerk-react";
+import { useUser, SignOutButton } from "@clerk/clerk-react";
+import signOutImg from "../assets/signOutImg.svg";
 
 // GameBoard instance - renders collection of SingleCells
 const GameBoard = () => {
@@ -497,6 +498,14 @@ const GameBoard = () => {
 				<p className="helperText">{playerName}</p>
 			</div>
 			<div className="horizontalParent">
+				<SignOutButton>
+					<ToolbarButton
+						label="Sign Out"
+						onClick={() => clearBoard()}
+						bgColor="blue"
+						icon={signOutImg}
+					/>
+				</SignOutButton>
 				<ToolbarButton
 					label="Save Game"
 					onClick={() => saveGame()}
