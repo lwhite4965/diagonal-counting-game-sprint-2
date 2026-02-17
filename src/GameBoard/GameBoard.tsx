@@ -15,6 +15,7 @@ import uploadImg from "../assets/uploadImg.svg";
 import resetImg from "../assets/resetImg.svg";
 import undoImg from "../assets/undoImg.svg";
 import { useTimer } from "../hooks/useTimer";
+import { useUser } from "@clerk/clerk-react";
 
 // GameBoard instance - renders collection of SingleCells
 const GameBoard = () => {
@@ -57,13 +58,16 @@ const GameBoard = () => {
 	// Currently displayed error message - reset to null after each successful placement
 	const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
-	// Players name - used for logging games
-	const [playerName, setPlayerName] = useState<string>("");
-
 	// Unpack from custom useTimer hook
 	const { currSeconds, resetTimer, setCurrSeconds } = useTimer({
 		duration: 30
 	});
+
+	// Unpack user object from Clerk - no need to check isLoading since GameBoard is only loaded when logged in
+	const { user } = useUser();
+
+	// PULL PLAYER EMAIL FROM CLERK TO USE AS NAME
+	const playerName = user?.emailAddresses[0].emailAddress;
 
 	// PLACE METHODS HERE
 
@@ -80,7 +84,7 @@ const GameBoard = () => {
 		finalScore: number
 	): void {
 		const logEntry = {
-			playerName: playerName.trim() || "Anonymous",
+			playerName: playerName || "Anonymous",
 			playDateTime: new Date().toISOString(),
 			level: completedLevel,
 			rewardsOrPoints: finalScore,
@@ -163,7 +167,6 @@ const GameBoard = () => {
 					setScore(parsed.score);
 					setCurrSeconds(parsed.currSeconds);
 					setErrorMsg(parsed.errorMsg);
-					setPlayerName(parsed.playerName);
 				} catch {
 					setErrorMsg("Selected File is Invalid.");
 				}
@@ -491,14 +494,7 @@ const GameBoard = () => {
 				<label className="playerNameLabel" htmlFor="playerName">
 					Player Name:
 				</label>
-				<input
-					id="playerName"
-					className="playerNameInput"
-					type="text"
-					placeholder="Enter your name"
-					value={playerName}
-					onChange={(e) => setPlayerName(e.target.value)}
-				/>
+				<p className="helperText">{playerName}</p>
 			</div>
 			<div className="horizontalParent">
 				<ToolbarButton
