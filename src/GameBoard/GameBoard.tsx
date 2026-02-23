@@ -9,7 +9,7 @@ import {
 	playVictory,
 	deepCopyMatrix
 } from "./helpers";
-import { useState } from "react";
+import { act, useState } from "react";
 import downloadImg from "../assets/downloadImg.svg";
 import uploadImg from "../assets/uploadImg.svg";
 import resetImg from "../assets/resetImg.svg";
@@ -17,6 +17,8 @@ import undoImg from "../assets/undoImg.svg";
 import { useTimer } from "../hooks/useTimer";
 import { useUser, SignOutButton } from "@clerk/clerk-react";
 import signOutImg from "../assets/signOutImg.svg";
+import saveFileLevel2 from "../assets/saveFileLevel2.json";
+import saveFileLevel3 from "../assets/saveFileLevel3.json";
 
 // GameBoard instance - renders collection of SingleCells
 const GameBoard = () => {
@@ -51,7 +53,7 @@ const GameBoard = () => {
 	>([{ number: 1, location: [randomX, randomY], pointsEarned: 0 }]);
 
 	// Which "level" is active - used for handling input logic and rendering outer layer
-	const [activeLevel, setActiveLevel] = useState<1 | 2 | 3>(1);
+	const [activeLevel, setActiveLevel] = useState<number>(1);
 
 	// Current score
 	const [score, setScore] = useState<number>(0);
@@ -520,6 +522,30 @@ const GameBoard = () => {
 		resetTimer();
 	}
 
+	function skipLevel() {
+		let saveFile = null;
+
+		switch (activeLevel) {
+			case 1:
+				saveFile = saveFileLevel2;
+				break;
+			case 2:
+				saveFile = saveFileLevel3;
+				break;
+			default:
+				handleError("Cannot skip the last level.");
+				return;
+		}
+
+		setMatrix(saveFile.matrix);
+		setNextToPlace(saveFile.nextToPlace);
+		setCellPlacementHistory(saveFile.cellPlacementHistory);
+		setActiveLevel(saveFile.activeLevel);
+		setScore(saveFile.score);
+		setCurrSeconds(saveFile.currSeconds);
+		setErrorMsg(saveFile.errorMsg);
+	}
+
 	// Return Grid of SingleCells, passing corresponding matrix value to each
 	return (
 		<div className="verticalParent">
@@ -561,6 +587,12 @@ const GameBoard = () => {
 				<ToolbarButton
 					label="Clear"
 					onClick={clearBoard}
+					bgColor="lightPurple"
+					icon={resetImg}
+				/>
+				<ToolbarButton
+					label="Skip Level"
+					onClick={skipLevel}
 					bgColor="lightPurple"
 					icon={resetImg}
 				/>
