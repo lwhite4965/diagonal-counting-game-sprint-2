@@ -51,7 +51,7 @@ const GameBoard = () => {
 	>([{ number: 1, location: [randomX, randomY], pointsEarned: 0 }]);
 
 	// Which "level" is active - used for handling input logic and rendering outer layer
-	const [activeLevel, setActiveLevel] = useState<1 | 2>(1);
+	const [activeLevel, setActiveLevel] = useState<1 | 2 | 3>(1);
 
 	// Current score
 	const [score, setScore] = useState<number>(0);
@@ -300,6 +300,28 @@ const GameBoard = () => {
 			return;
 		}
 
+		// get the position in level 1 of the number to be placed in level 2
+		// sr/c = source row/column
+		const sr = cellPlacementHistory[nextToPlace - 1].location[0];
+		const sc = cellPlacementHistory[nextToPlace - 1].location[1];
+
+		// check validity of placement for non-diagonals, diagonals, and center
+		if (
+			(
+				![[sr, 0], [0, sc], [sr, 6], [6, sc]].some(([a, b]) => a === r && b === c)
+			) && (
+				![[1, 1], [2, 2], [3, 3], [4, 4], [5, 5]].some(([a, b]) => a === sr && b === sc) ||
+				![[0, 0], [6, 6]].some(([a, b]) => a === r && b === c)
+			) && (
+				![[5, 1], [4, 2], [3, 3], [2, 4], [1, 5]].some(([a, b]) => a === sr && b === sc) ||
+				![[6, 0], [0, 6]].some(([a, b]) => a === r && b === c)
+			)
+		) {
+			// handle incorrect placements
+			handleError("Lvl 2 placements must relate to lvl 1 placements.");
+			return;
+		}
+
 		// error on trying to place in already filled cell
 		if (matrix[r][c] > 0) {
 			handleError("Cannot place number in already filled cell.");
@@ -313,118 +335,119 @@ const GameBoard = () => {
 			return;
 		}
 
-		// get the position in level 1 of the number to be placed in level 2
+		setMatrix((prev) => {
+			prev[r][c] = nextToPlace;
+			return prev;
+		});
+		setScore((prev) => prev + 1);
+		setErrorMsg(null);
+		playSuccess();
+
+		if (nextToPlace == 25) {
+			//Log Completed Level 2
+			const completedBoard = deepCopyMatrix(matrix);
+			completedBoard[r][c] = 25;
+			calculateTimeBonus();
+			logCompletedLevel(2, completedBoard, score);
+			setActiveLevel(3);
+			setNextToPlace(2);
+			const newMatrix = [...matrix];
+			for (let i = 1; i < 25; i++) {
+				const cellLocation = cellPlacementHistory[i].location;
+				newMatrix[cellLocation[0]][cellLocation[1]] = 0;
+			}
+			setMatrix(newMatrix);
+			setCellPlacementHistory([
+				...cellPlacementHistory,
+				{ number: nextToPlace, location: [r, c], pointsEarned: 1 },
+				{ number: 1, location: cellPlacementHistory[0].location, pointsEarned: 0 }
+			]);
+		} else {
+			setCellPlacementHistory([
+				...cellPlacementHistory,
+				{ number: nextToPlace, location: [r, c], pointsEarned: 1 }
+			]);
+			setNextToPlace((prev) => prev + 1);
+		}
+	}
+
+	// Define function for processing a move in lvl3 - accepts row column and cell type coordinates positionally
+	function processLvl3Move(r: number, c: number, cellType: string): void {
+		// error on trying to place in previous level
+		if (cellType !== "grey") {
+			handleError("Cannot place in level 2.");
+			return;
+		}
+
+		// Case where "2" through "25" is being placed
+		// Source coordinates of last placed cell
+		const lr =
+			cellPlacementHistory[cellPlacementHistory.length - 1].location[0];
+		const lc =
+			cellPlacementHistory[cellPlacementHistory.length - 1].location[1];
+
+		// Error on selecting non-adjacent cell
+		if (Math.abs(r - lr) > 1 || Math.abs(c - lc) > 1) {
+			handleError("Cannot place number in non-adjacent cell during level 3.");
+			return;
+		}		
+
+		// get the position in level 2 of the number to be placed in level 3
 		// sr/c = source row/column
-		const sr = cellPlacementHistory[nextToPlace - 1].location[0];
-		const sc = cellPlacementHistory[nextToPlace - 1].location[1];
+		const sr = cellPlacementHistory.slice(25).find((cell) => cell.number == nextToPlace)?.location[0];
+		const sc = cellPlacementHistory.slice(25).find((cell) => cell.number == nextToPlace)?.location[1];
 
-		// check validity of placement for non-diagonals
+		// check validity of placement
 		if (
-			[
-				[sr, 0],
-				[0, sc],
-				[sr, 6],
-				[6, sc]
-			].some(([a, b]) => a === r && b === c)
+			(
+				![[r, 0], [0, c], [r, 6], [6, c]].some(([a, b]) => a === sr && b === sc)
+			) && (
+				![[0, 0], [6, 6]].some(([a, b]) => a === sr && b === sc) ||
+				![[1, 1], [2, 2], [3, 3], [4, 4], [5, 5]].some(([a, b]) => a === r && b === c)
+			) && (
+				![[6, 0], [0, 6]].some(([a, b]) => a === sr && b === sc) ||
+				![[5, 1], [4, 2], [3, 3], [2, 4], [1, 5]].some(([a, b]) => a === r && b === c)
+			)
 		) {
-			setMatrix((prev) => {
-				prev[r][c] = nextToPlace;
-				return prev;
-			});
-			setCellPlacementHistory([
-				...cellPlacementHistory,
-				{ number: nextToPlace, location: [r, c], pointsEarned: 0 }
-			]);
-			setNextToPlace((prev) => prev + 1);
-			setErrorMsg(null);
-			if (nextToPlace == 25) {
-				//Log Completed Level 2
-				const completedBoard = deepCopyMatrix(matrix);
-				completedBoard[r][c] = 25;
-				calculateTimeBonus();
-				logCompletedLevel(2, completedBoard, score);
-				playVictory();
-			} else {
-				playSuccess();
-			}
+			// handle incorrect placements
+			handleError("Lvl 3 placements must relate to lvl 2 placements.");
 			return;
 		}
 
-		// check validity of placement for diagonals and center
-		if (
-			[
-				[1, 1],
-				[2, 2],
-				[3, 3],
-				[4, 4],
-				[5, 5]
-			].some(([a, b]) => a === sr && b === sc) &&
-			[
-				[0, 0],
-				[6, 6]
-			].some(([a, b]) => a === r && b === c)
-		) {
-			setMatrix((prev) => {
-				prev[r][c] = nextToPlace;
-				return prev;
-			});
-			setCellPlacementHistory([
-				...cellPlacementHistory,
-				{ number: nextToPlace, location: [r, c], pointsEarned: 0 }
-			]);
-			setNextToPlace((prev) => prev + 1);
-			setErrorMsg(null);
-			if (nextToPlace == 25) {
-				//Log Completed Level 2
-				const completedBoard = deepCopyMatrix(matrix);
-				completedBoard[r][c] = 25;
-				calculateTimeBonus();
-				logCompletedLevel(2, completedBoard, score);
-				playVictory();
-			} else {
-				playSuccess();
-			}
+		// Error on trying to place in already filled cell
+		if (matrix[r][c] > 0) {
+			handleError("Cannot place number in already filled cell.");
 			return;
 		}
 
-		if (
-			[
-				[5, 1],
-				[4, 2],
-				[3, 3],
-				[2, 4],
-				[1, 5]
-			].some(([a, b]) => a === sr && b === sc) &&
-			[
-				[6, 0],
-				[0, 6]
-			].some(([a, b]) => a === r && b === c)
-		) {
-			setMatrix((prev) => {
-				prev[r][c] = nextToPlace;
-				return prev;
-			});
-			setCellPlacementHistory([
-				...cellPlacementHistory,
-				{ number: nextToPlace, location: [r, c], pointsEarned: 0 }
-			]);
-			setNextToPlace((prev) => prev + 1);
-			setErrorMsg(null);
-			if (nextToPlace == 25) {
-				//Log Completed Level 2
-				const completedBoard = deepCopyMatrix(matrix);
-				completedBoard[r][c] = 25;
-				calculateTimeBonus();
-				logCompletedLevel(2, completedBoard, score);
-				playVictory();
-			} else {
-				playSuccess();
-			}
+		//Prompt player to enter the number
+		const enteredNumber = prompt("Enter the number to place:");
+		if (enteredNumber === null || parseInt(enteredNumber) !== nextToPlace) {
+			handleError(`Invalid number entered. Expected ${nextToPlace}.`);
 			return;
 		}
 
-		// handle incorrect placements
-		handleError("Lvl 2 placements must relate to lvl 1 placements.");
+		setMatrix((prev) => {
+			prev[r][c] = nextToPlace;
+			return prev;
+		});
+		setCellPlacementHistory([
+			...cellPlacementHistory,
+			{ number: nextToPlace, location: [r, c], pointsEarned: 1 }
+		]);
+		setScore((prev) => prev + 1);
+		setErrorMsg(null);
+		if (nextToPlace == 25) {
+			//Log Completed Level 3
+			const completedBoard = deepCopyMatrix(matrix);
+			completedBoard[r][c] = 25;
+			calculateTimeBonus();
+			logCompletedLevel(3, completedBoard, score);
+			playVictory();
+		} else {
+			playSuccess();
+			setNextToPlace((prev) => prev + 1);
+		}
 	}
 
 	// Define function for undoing a cell placement. Deny undos when next to place is 1.
@@ -434,6 +457,9 @@ const GameBoard = () => {
 			return;
 		} else if (activeLevel == 2 && nextToPlace <= 2) {
 			handleError("Cannot undo from Level 2 to Level 1.");
+			return;
+		} else if (activeLevel == 3 && nextToPlace <= 2) {
+			handleError("Cannot undo from Level 3 to Level 2.");
 			return;
 		}
 
@@ -460,6 +486,9 @@ const GameBoard = () => {
 		} else if (activeLevel == 2 && nextToPlace <= 2) {
 			handleError("Cannot clear board from Level 2 to Level 1.");
 			return;
+		} else if (activeLevel == 3 && nextToPlace <= 2) {
+			handleError("Cannot clear board from Level 3 to Level 2.");
+			return;
 		}
 
 		const newMatrix = [...initialMatrix];
@@ -471,9 +500,13 @@ const GameBoard = () => {
 			newMatrix.forEach((row, i) => {
 				newMatrix[i] = row.map((col) => (col === -1 ? 0 : col));
 			});
+		} else if (activeLevel == 3) {
+			cellsSaved = 50;
 		}
 
-		for (let i = 0; i < cellsSaved; i++) {
+		let i = activeLevel == 3 ? 25 : 0;
+
+		for (i; i < cellsSaved; i++) {
 			const cellPlacement = cellPlacementHistory[i];
 			newMatrix[cellPlacement.location[0]][cellPlacement.location[1]] =
 				cellPlacement.number;
@@ -546,7 +579,7 @@ const GameBoard = () => {
 									onClick={
 										activeLevel == 1
 											? processLvl1Move
-											: processLvl2Move
+											: (activeLevel == 2 ? processLvl2Move : processLvl3Move)
 									}
 									selected={
 										cellPlacementHistory.length > 0 &&
