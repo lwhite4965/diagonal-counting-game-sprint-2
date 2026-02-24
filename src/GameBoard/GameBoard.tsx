@@ -15,6 +15,7 @@ import uploadImg from "../assets/uploadImg.svg";
 import resetImg from "../assets/resetImg.svg";
 import undoImg from "../assets/undoImg.svg";
 import skipImg from "../assets/skipImg.svg";
+import themeImg from "../assets/themeImg.svg";
 import { useTimer } from "../hooks/useTimer";
 import { useUser, SignOutButton } from "@clerk/clerk-react";
 import signOutImg from "../assets/signOutImg.svg";
@@ -47,6 +48,9 @@ const GameBoard = () => {
 
 	// Internally tracks the next number to be placed - starts at 2 since 1 is autoplaced
 	const [nextToPlace, setNextToPlace] = useState<number>(2);
+
+	// Internally track the theme - 0 1 or 2
+	const [theme, setTheme] = useState<number>(0);
 
 	// Track stack of moves to for implementing undo feature
 	const [cellPlacementHistory, setCellPlacementHistory] = useState<
@@ -640,9 +644,18 @@ const GameBoard = () => {
 					bgColor="red"
 					icon={skipImg}
 				/>
+				<ToolbarButton
+					label="Theme"
+					onClick={() =>
+						setTheme((prev) => (prev === 2 ? 0 : prev + 1))
+					}
+					bgColor="yellow"
+					icon={themeImg}
+				/>
 			</div>
 			<div className="horizontalParent">
-				<div className="grid7x7">
+				<div
+					className={`grid7x7 ${theme === 1 ? "secondaryBg" : ""} ${theme === 2 ? "tertiaryBg" : ""}`}>
 					{matrix.map((row, rowCount) =>
 						row.map((cellValue, cellCount) => {
 							const currLoop = rowCount * 7 + cellCount;
@@ -670,6 +683,7 @@ const GameBoard = () => {
 												cellPlacementHistory.length - 1
 											].location[1]
 									}
+									theme={theme}
 								/>
 							);
 						})

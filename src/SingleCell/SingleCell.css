@@ -14,16 +14,40 @@
 	text-shadow: 1px 1px 1px rgb(23, 75, 246);
 }
 /* Specialized color classes that signify different cell types */
-.grey {
+.grey0 {
 	background-color: rgb(186, 186, 186);
 }
 
-.blue {
+.blue0 {
 	background-color: rgb(112, 162, 247);
 }
 
-.gold {
+.gold0 {
 	background-color: rgb(243, 191, 38);
+}
+
+.grey1 {
+	background-color: rgb(165, 165, 165);
+}
+
+.blue1 {
+	background-color: rgb(161, 112, 247);
+}
+
+.gold1 {
+	background-color: rgb(115, 255, 0);
+}
+
+.grey2 {
+	background-color: rgb(193, 192, 192);
+}
+
+.blue2 {
+	background-color: rgb(79, 202, 255);
+}
+
+.gold2 {
+	background-color: rgb(243, 38, 38);
 }
 
 /* Specialized class to emphasize the last selected cell */
