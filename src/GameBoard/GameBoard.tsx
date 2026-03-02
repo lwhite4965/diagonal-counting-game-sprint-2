@@ -16,11 +16,13 @@ import resetImg from "../assets/resetImg.svg";
 import undoImg from "../assets/undoImg.svg";
 import skipImg from "../assets/skipImg.svg";
 import themeImg from "../assets/themeImg.svg";
+import rulesImg from "../assets/rulesImg.svg";
 import { useTimer } from "../hooks/useTimer";
 import { useUser, SignOutButton } from "@clerk/clerk-react";
 import signOutImg from "../assets/signOutImg.svg";
 import saveFileLevel2 from "../assets/saveFileLevel2.json";
 import saveFileLevel3 from "../assets/saveFileLevel3.json";
+import RulesModal from "../RulesModal/RulesModal";
 
 // GameBoard instance - renders collection of SingleCells
 const GameBoard = () => {
@@ -76,6 +78,9 @@ const GameBoard = () => {
 
 	// PULL PLAYER EMAIL FROM CLERK TO USE AS NAME
 	const playerName = user?.emailAddresses[0].emailAddress;
+
+	// Boolean variable for checking if rules modal is open
+	const [rulesVisible, setRulesVisible] = useState(false);
 
 	// PLACE METHODS HERE
 
@@ -602,6 +607,7 @@ const GameBoard = () => {
 	// Return Grid of SingleCells, passing corresponding matrix value to each
 	return (
 		<div className="verticalParent">
+			{rulesVisible && <RulesModal level={activeLevel} closeFunction={setRulesVisible} />}
 			<div className="horizontalParent">
 				<ToolbarButton
 					label="Save Game"
@@ -651,6 +657,12 @@ const GameBoard = () => {
 					}
 					bgColor="yellow"
 					icon={themeImg}
+				/>
+				<ToolbarButton
+					label="Rules"
+					onClick={() => {setRulesVisible(!rulesVisible)}}
+					bgColor="teal"
+					icon={rulesImg}
 				/>
 			</div>
 			<div className="horizontalParent">
