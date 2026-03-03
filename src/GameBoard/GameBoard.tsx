@@ -607,7 +607,7 @@ const GameBoard = () => {
 				}
 			}
 		}
-
+	
 		// Process diagonals (NW/SE)
 		if ([
 			[1, 1],
@@ -693,39 +693,87 @@ const GameBoard = () => {
 
 	// Returns matrix with a lvl 3 game solution
 	function lvl3DFS(
-		//mtx: any
+		mtx: number[][] = deepCopyMatrix(matrix),
+		R: number = cellPlacementHistory[cellPlacementHistory.length - 1].location[0],
+		C: number = cellPlacementHistory[cellPlacementHistory.length - 1].location[1],
+		nextNum: number = nextToPlace
 	): number[][] | null {
+
+		// Base case
+		if (nextNum > 25) return mtx
+
+		// Find where nextNum was placed in level 2 (entries 25-49 in history)
+		const lvl2Entry = cellPlacementHistory.slice(25, 50).find(cell => cell.number === nextNum)
+		if (!lvl2Entry) return null
+
+		const sr = lvl2Entry.location[0]
+		const sc = lvl2Entry.location[1]
+
+		function isValidByLvl2Constraint(r: number, c: number): boolean {
+			// NW/SE diagonal corners
+			const isNWSECorner = [[0, 0], [6, 6]].some(([a, b]) => a === sr && b === sc)
+			if (isNWSECorner) {
+				return [[1,1],[2,2],[3,3],[4,4],[5,5]].some(([a, b]) => a === r && b === c)
+			}
+
+			// NE/SW diagonal corners
+			const isNESWCorner = [[6, 0], [0, 6]].some(([a, b]) => a === sr && b === sc)
+			if (isNESWCorner) {
+				return [[5,1],[4,2],[3,3],[2,4],[1,5]].some(([a, b]) => a === r && b === c)
+			}
+
+			// Center maps to all inner cells
+			if (sr === 3 && sc === 3) return true
+
+			// Edge/side: inner cell must share row or column with outer cell
+			return r === sr || c === sc
+		}
+
+		// Try all adjacent inner cells
+		for (let r = R - 1; r <= R + 1; r++) {
+			for (let c = C - 1; c <= C + 1; c++) {
+				if (r < 1 || r > 5 || c < 1 || c > 5 || (r === R && c === C)) continue
+				if (mtx[r][c] !== 0) continue
+				if (!isValidByLvl2Constraint(r, c)) continue
+
+				mtx[r][c] = nextNum
+
+				const result = lvl3DFS(mtx, r, c, nextNum + 1)
+				if (result !== null) return result
+
+				mtx[r][c] = 0
+			}
+		}
 
 		return null
 	}
+		// Define function for undoing a cell placement. Deny undos when next to place is 1.
+		function undoCellPlacement() {
+			if (activeLevel == 1 && nextToPlace <= 2) {
+				handleError("Cannot undo from the start of the game.");
+				return;
+			} else if (activeLevel == 2 && nextToPlace <= 2) {
+				handleError("Cannot undo from Level 2 to Level 1.");
+				return;
+			} else if (activeLevel == 3 && nextToPlace <= 2) {
+				handleError("Cannot undo from Level 3 to Level 2.");
+				return;
+			}
 
-	// Define function for undoing a cell placement. Deny undos when next to place is 1.
-	function undoCellPlacement() {
-		if (activeLevel == 1 && nextToPlace <= 2) {
-			handleError("Cannot undo from the start of the game.");
-			return;
-		} else if (activeLevel == 2 && nextToPlace <= 2) {
-			handleError("Cannot undo from Level 2 to Level 1.");
-			return;
-		} else if (activeLevel == 3 && nextToPlace <= 2) {
-			handleError("Cannot undo from Level 3 to Level 2.");
-			return;
-		}
+			const lastCellPlacement = cellPlacementHistory.pop();
+			if (lastCellPlacement) {
+				const newMatrix = [...matrix];
+				newMatrix[lastCellPlacement.location[0]][
+					lastCellPlacement.location[1]
+				] = 0;
+				setMatrix(newMatrix);
+				setNextToPlace((prev) => prev - 1);
 
-		const lastCellPlacement = cellPlacementHistory.pop();
-		if (lastCellPlacement) {
-			const newMatrix = [...matrix];
-			newMatrix[lastCellPlacement.location[0]][
-				lastCellPlacement.location[1]
-			] = 0;
-			setMatrix(newMatrix);
-			setNextToPlace((prev) => prev - 1);
-
-			if (lastCellPlacement.pointsEarned > 0) {
-				setScore((prev) => prev - lastCellPlacement.pointsEarned);
+				if (lastCellPlacement.pointsEarned > 0) {
+					setScore((prev) => prev - lastCellPlacement.pointsEarned);
+				}
 			}
 		}
-	}
 
 	// Define function for clearing the board, keeping only the 1's placement.
 	function clearBoard() {
