@@ -43,6 +43,9 @@
 .teal {
 	background-color: aquamarine;
 }
+.orange {
+	background-color: rgb(241, 187, 86);
+}
 
 /* Generic class for toolbar text - positioned to be centered on Button*/
 .toolbarText {

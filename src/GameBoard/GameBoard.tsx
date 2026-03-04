@@ -20,8 +20,7 @@ import rulesImg from "../assets/rulesImg.svg";
 import { useTimer } from "../hooks/useTimer";
 import { useUser, SignOutButton } from "@clerk/clerk-react";
 import signOutImg from "../assets/signOutImg.svg";
-import saveFileLevel2 from "../assets/saveFileLevel2.json";
-import saveFileLevel3 from "../assets/saveFileLevel3.json";
+import SolnModal from "../SolnModal/SolnModal";
 import RulesModal from "../RulesModal/RulesModal";
 
 // GameBoard instance - renders collection of SingleCells
@@ -81,6 +80,9 @@ const GameBoard = () => {
 
 	// Boolean variable for checking if rules modal is open
 	const [rulesVisible, setRulesVisible] = useState(false);
+
+	// Same for solnModal
+	const [solnVisible, setSolnVisible] = useState(false);
 
 	// PLACE METHODS HERE
 
@@ -524,7 +526,7 @@ const GameBoard = () => {
 				cellPlacementHistory[cellPlacementHistory.length - 1]
 					.location[1];
 
-			console.table(lvl1DFS(mtx, lr, lc, nextToPlace));
+			return lvl1DFS(mtx, lr, lc, nextToPlace);
 		} else if (activeLevel === 2) {
 			// Find last placed num on inner grid
 			const lr =
@@ -534,7 +536,7 @@ const GameBoard = () => {
 				cellPlacementHistory[cellPlacementHistory.length - 24]
 					.location[1];
 
-			console.table(lvl2DFS(mtx, lr, lc, nextToPlace, 0));
+			return lvl2DFS(mtx, lr, lc, nextToPlace, 0);
 		} else {
 			const lr =
 				cellPlacementHistory[cellPlacementHistory.length - 1]
@@ -543,7 +545,7 @@ const GameBoard = () => {
 				cellPlacementHistory[cellPlacementHistory.length - 1]
 					.location[1];
 
-			console.table(lvl3DFS(mtx, lr, lc, nextToPlace));
+			return lvl3DFS(mtx, lr, lc, nextToPlace);
 		}
 	}
 
@@ -896,30 +898,6 @@ const GameBoard = () => {
 		resetTimer();
 	}
 
-	function skipLevel() {
-		let saveFile = null;
-
-		switch (activeLevel) {
-			case 1:
-				saveFile = saveFileLevel2;
-				break;
-			case 2:
-				saveFile = saveFileLevel3;
-				break;
-			default:
-				handleError("Cannot skip the last level.");
-				return;
-		}
-
-		setMatrix(saveFile.matrix);
-		setNextToPlace(saveFile.nextToPlace);
-		setCellPlacementHistory(saveFile.cellPlacementHistory);
-		setActiveLevel(saveFile.activeLevel);
-		setScore(saveFile.score);
-		setCurrSeconds(saveFile.currSeconds);
-		setErrorMsg(saveFile.errorMsg);
-	}
-
 	// Return Grid of SingleCells, passing corresponding matrix value to each
 	return (
 		<div className="verticalParent">
@@ -929,12 +907,15 @@ const GameBoard = () => {
 					closeFunction={setRulesVisible}
 				/>
 			)}
-			<div className="horizontalParent">
-				<ToolbarButton
-					label="Solve"
-					onClick={() => getSolution()}
-					bgColor="lightBlue"
+			{solnVisible && (
+				<SolnModal
+					possibleMatrix={getSolution()}
+					closeFunction={setSolnVisible}
+					level={activeLevel}
+					trueMatrix={matrix}
 				/>
+			)}
+			<div className="horizontalParent">
 				<ToolbarButton
 					label="Save Game"
 					onClick={() => saveGame()}
@@ -971,9 +952,9 @@ const GameBoard = () => {
 					/>
 				</SignOutButton>
 				<ToolbarButton
-					label="Skip Level"
-					onClick={skipLevel}
-					bgColor="red"
+					label="Solve"
+					onClick={() => setSolnVisible(!solnVisible)}
+					bgColor="orange"
 					icon={skipImg}
 				/>
 				<ToolbarButton
