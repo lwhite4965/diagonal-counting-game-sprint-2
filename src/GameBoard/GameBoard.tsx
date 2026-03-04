@@ -526,7 +526,10 @@ const GameBoard = () => {
 			console.table(lvl2DFS(mtx, lr, lc, nextToPlace, 0))
 		}
 		else {
-			console.table(lvl3DFS())
+			const lr = cellPlacementHistory[cellPlacementHistory.length - 1].location[0]
+			const lc = cellPlacementHistory[cellPlacementHistory.length - 1].location[1]
+
+			console.table(lvl3DFS(mtx, lr, lc, nextToPlace))
 		}
 	}
 
@@ -693,10 +696,10 @@ const GameBoard = () => {
 
 	// Returns matrix with a lvl 3 game solution
 	function lvl3DFS(
-		mtx: number[][] = deepCopyMatrix(matrix),
-		R: number = cellPlacementHistory[cellPlacementHistory.length - 1].location[0],
-		C: number = cellPlacementHistory[cellPlacementHistory.length - 1].location[1],
-		nextNum: number = nextToPlace
+		mtx: number[][],
+		R: number,
+		C: number,
+		nextNum: number
 	): number[][] | null {
 
 		// Base case
