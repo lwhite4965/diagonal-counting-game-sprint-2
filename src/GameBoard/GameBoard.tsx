@@ -188,7 +188,7 @@ const GameBoard = () => {
 			reader.readAsText(file);
 		};
 
-		// Initialize file input diolog
+		// Initialize file input dialog
 		input.click();
 	}
 
@@ -480,7 +480,7 @@ const GameBoard = () => {
 			return;
 		}
 
-		//Prompt player to enter the number
+		// Prompt player to enter the number
 		const enteredNumber = prompt("Enter the number to place:");
 		if (enteredNumber === null || parseInt(enteredNumber) !== nextToPlace) {
 			handleError(`Invalid number entered. Expected ${nextToPlace}.`);
@@ -510,33 +510,278 @@ const GameBoard = () => {
 		}
 	}
 
-	// Define function for undoing a cell placement. Deny undos when next to place is 1.
-	function undoCellPlacement() {
-		if (activeLevel == 1 && nextToPlace <= 2) {
-			handleError("Cannot undo from the start of the game.");
-			return;
-		} else if (activeLevel == 2 && nextToPlace <= 2) {
-			handleError("Cannot undo from Level 2 to Level 1.");
-			return;
-		} else if (activeLevel == 3 && nextToPlace <= 2) {
-			handleError("Cannot undo from Level 3 to Level 2.");
-			return;
+
+	// Wrapper function
+	function getSolution() {
+		// Create new matrix to track solution
+		let mtx = deepCopyMatrix(matrix)
+
+		if (activeLevel === 1) {
+			// Find last placed num
+			const lr = cellPlacementHistory[cellPlacementHistory.length - 1].location[0]
+			const lc = cellPlacementHistory[cellPlacementHistory.length - 1].location[1]
+
+			console.table(lvl1DFS(mtx, lr, lc, nextToPlace))
 		}
+		else if (activeLevel === 2) {
+			// Find last placed num on inner grid
+			const lr = cellPlacementHistory[cellPlacementHistory.length - 24].location[0]
+			const lc = cellPlacementHistory[cellPlacementHistory.length - 24].location[1]
 
-		const lastCellPlacement = cellPlacementHistory.pop();
-		if (lastCellPlacement) {
-			const newMatrix = [...matrix];
-			newMatrix[lastCellPlacement.location[0]][
-				lastCellPlacement.location[1]
-			] = 0;
-			setMatrix(newMatrix);
-			setNextToPlace((prev) => prev - 1);
+			console.table(lvl2DFS(mtx, lr, lc, nextToPlace, 0))
+		}
+		else {
+			const lr = cellPlacementHistory[cellPlacementHistory.length - 1].location[0]
+			const lc = cellPlacementHistory[cellPlacementHistory.length - 1].location[1]
 
-			if (lastCellPlacement.pointsEarned > 0) {
-				setScore((prev) => prev - lastCellPlacement.pointsEarned);
-			}
+			console.table(lvl3DFS(mtx, lr, lc, nextToPlace))
 		}
 	}
+
+	// Returns matrix with a lvl 1 game solution
+	function lvl1DFS(
+		mtx: number[][],
+		R: number,
+		C: number,
+		nextNum: number
+	): number[][] | null {
+
+		// base case, return successful mtx
+		if (nextNum > 25) {
+			return mtx
+		}
+
+		for (let r = R - 1; r <= R + 1; r++) {
+            for (let c = C - 1; c <= C + 1; c++) {
+				if (r < 1 || r > 5 || c < 1 || c > 5 || (r === R && c === C)) {
+                    continue;
+                }
+
+				if (mtx[r][c] === 0) {
+					mtx[r][c] = nextNum
+
+					const result = lvl1DFS(mtx, r, c, nextNum + 1)
+					if (result !== null) {
+						return result
+					}
+
+					// backtrack
+					mtx[r][c] = 0
+				}
+			}
+		}
+
+		return null
+	}
+
+	// Returns matrix with a lvl 2 game solution
+	function lvl2DFS(
+		mtx: number[][],
+		R: number,
+		C: number,
+		nextNum: number,
+		depth: number
+	): number[][] | null {
+
+		const offset = 23
+
+		// base case, return successful mtx
+		if (nextNum > 25) {
+			return mtx
+		}
+
+		let lr = 0, lc = 0
+
+		// Process center
+		if (R === 3 && C === 3) {
+			for (let [r, c] of [[0, 0], [0, 6], [6, 0], [6, 6]]) {
+				if (mtx[r][c] === 0) {	
+					mtx[r][c] = nextNum
+					
+					if (nextNum !== 25) {
+						// get position of nextNum+1 in inner grid by adding depth
+						lr = cellPlacementHistory[cellPlacementHistory.length - offset + depth].location[0]
+						lc = cellPlacementHistory[cellPlacementHistory.length - offset + depth].location[1]
+					}
+
+					// recursive call
+					const result = lvl2DFS(mtx, lr, lc, nextNum + 1, depth + 1)
+					if (result !== null) {
+						return result
+					}
+
+					// backtrack
+					mtx[r][c] = 0
+				}
+			}
+		}
+	
+		// Process diagonals (NW/SE)
+		if ([
+			[1, 1],
+			[2, 2],
+			[4, 4], 
+			[5, 5]
+		].some(([a, b]) => a === R && b === C)) {
+			for (let [r, c] of [[0, 0], [6, 6]]) {
+				if (mtx[r][c] === 0) {	
+					mtx[r][c] = nextNum
+					
+					if (nextNum !== 25) {
+						// get position of nextNum+1 in inner grid by adding depth
+						lr = cellPlacementHistory[cellPlacementHistory.length - offset + depth].location[0]
+						lc = cellPlacementHistory[cellPlacementHistory.length - offset + depth].location[1]
+					}
+
+					// recursive call
+					const result = lvl2DFS(mtx, lr, lc, nextNum + 1, depth + 1)
+					if (result !== null) {
+						return result
+					}
+
+					// backtrack
+					mtx[r][c] = 0
+				}
+			}
+		}
+		// (NE/SW)
+		if ([
+			[5, 1],
+			[4, 2],
+			[2, 4], 
+			[1, 5]
+		].some(([a, b]) => a === R && b === C)) {
+			for (let [r, c] of [[6, 0], [0, 6]]) {
+				if (mtx[r][c] === 0) {	
+					mtx[r][c] = nextNum
+					
+					if (nextNum !== 25) {
+						// get position of nextNum+1 in inner grid by adding depth
+						lr = cellPlacementHistory[cellPlacementHistory.length - offset + depth].location[0]
+						lc = cellPlacementHistory[cellPlacementHistory.length - offset + depth].location[1]
+					}
+
+					// recursive call
+					const result = lvl2DFS(mtx, lr, lc, nextNum + 1, depth + 1)
+					if (result !== null) {
+						return result
+					}
+
+					// backtrack
+					mtx[r][c] = 0
+				}
+			}
+		}
+
+		// Process non-diagonals (N/S/E/W) for every square
+		for (let [r, c] of [[R, 0], [R, 6], [0, C], [6, C]]) {
+			if (mtx[r][c] === 0) {	
+				mtx[r][c] = nextNum
+				
+				if (nextNum !== 25) {
+					// get position of nextNum+1 in inner grid by adding depth
+					lr = cellPlacementHistory[cellPlacementHistory.length - offset + depth].location[0]
+					lc = cellPlacementHistory[cellPlacementHistory.length - offset + depth].location[1]
+				}
+
+				// recursive call
+				const result = lvl2DFS(mtx, lr, lc, nextNum + 1, depth + 1)
+				if (result !== null) {
+					return result
+				}
+
+				// backtrack
+				mtx[r][c] = 0
+			}
+
+		}
+
+		return null
+	}
+
+	// Returns matrix with a lvl 3 game solution
+	function lvl3DFS(
+		mtx: number[][],
+		R: number,
+		C: number,
+		nextNum: number
+	): number[][] | null {
+
+		// Base case
+		if (nextNum > 25) return mtx
+
+		// Find where nextNum was placed in level 2 (entries 25-49 in history)
+		const lvl2Entry = cellPlacementHistory.slice(25, 50).find(cell => cell.number === nextNum)
+		if (!lvl2Entry) return null
+
+		const sr = lvl2Entry.location[0]
+		const sc = lvl2Entry.location[1]
+
+		function isValidByLvl2Constraint(r: number, c: number): boolean {
+			// NW/SE diagonal corners
+			const isNWSECorner = [[0, 0], [6, 6]].some(([a, b]) => a === sr && b === sc)
+			if (isNWSECorner) {
+				return [[1,1],[2,2],[3,3],[4,4],[5,5]].some(([a, b]) => a === r && b === c)
+			}
+
+			// NE/SW diagonal corners
+			const isNESWCorner = [[6, 0], [0, 6]].some(([a, b]) => a === sr && b === sc)
+			if (isNESWCorner) {
+				return [[5,1],[4,2],[3,3],[2,4],[1,5]].some(([a, b]) => a === r && b === c)
+			}
+
+			// Center maps to all inner cells
+			if (sr === 3 && sc === 3) return true
+
+			// Edge/side: inner cell must share row or column with outer cell
+			return r === sr || c === sc
+		}
+
+		// Try all adjacent inner cells
+		for (let r = R - 1; r <= R + 1; r++) {
+			for (let c = C - 1; c <= C + 1; c++) {
+				if (r < 1 || r > 5 || c < 1 || c > 5 || (r === R && c === C)) continue
+				if (mtx[r][c] !== 0) continue
+				if (!isValidByLvl2Constraint(r, c)) continue
+
+				mtx[r][c] = nextNum
+
+				const result = lvl3DFS(mtx, r, c, nextNum + 1)
+				if (result !== null) return result
+
+				mtx[r][c] = 0
+			}
+		}
+
+		return null
+	}
+		// Define function for undoing a cell placement. Deny undos when next to place is 1.
+		function undoCellPlacement() {
+			if (activeLevel == 1 && nextToPlace <= 2) {
+				handleError("Cannot undo from the start of the game.");
+				return;
+			} else if (activeLevel == 2 && nextToPlace <= 2) {
+				handleError("Cannot undo from Level 2 to Level 1.");
+				return;
+			} else if (activeLevel == 3 && nextToPlace <= 2) {
+				handleError("Cannot undo from Level 3 to Level 2.");
+				return;
+			}
+
+			const lastCellPlacement = cellPlacementHistory.pop();
+			if (lastCellPlacement) {
+				const newMatrix = [...matrix];
+				newMatrix[lastCellPlacement.location[0]][
+					lastCellPlacement.location[1]
+				] = 0;
+				setMatrix(newMatrix);
+				setNextToPlace((prev) => prev - 1);
+
+				if (lastCellPlacement.pointsEarned > 0) {
+					setScore((prev) => prev - lastCellPlacement.pointsEarned);
+				}
+			}
+		}
 
 	// Define function for clearing the board, keeping only the 1's placement.
 	function clearBoard() {
@@ -609,6 +854,11 @@ const GameBoard = () => {
 		<div className="verticalParent">
 			{rulesVisible && <RulesModal level={activeLevel} closeFunction={setRulesVisible} />}
 			<div className="horizontalParent">
+				<ToolbarButton
+					label="Solve"
+					onClick={() => getSolution()}
+					bgColor="lightBlue"
+				/>
 				<ToolbarButton
 					label="Save Game"
 					onClick={() => saveGame()}
